@@ -38,6 +38,7 @@ class BurpExtender(IBurpExtender, IMessageEditorTabFactory, IContextMenuFactory,
         resHeaders = analyzedIResponseInfo.getHeaders() 
         resBodys = response[analyzedIResponseInfo.getBodyOffset():].tostring()  
         # resStatusCode = analyzedIResponseInfo.getStatusCode() 
+        return resHeaders, resBodys
     def get_server_info(self, httpService):
         host = httpService.getHost()
         port = httpService.getPort()
