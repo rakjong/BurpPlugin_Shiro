@@ -4,6 +4,8 @@ from burp import IScannerCheck
 from burp import IScanIssue
 from burp import IMessageEditorTabFactory
 from burp import IContextMenuFactory
+import re
+
 class BurpExtender(IBurpExtender, IMessageEditorTabFactory, IContextMenuFactory, IScannerCheck):
     def registerExtenderCallbacks(self, callbacks):
         sys.stdout = callbacks.getStdout()
@@ -26,19 +28,19 @@ class BurpExtender(IBurpExtender, IMessageEditorTabFactory, IContextMenuFactory,
 
 
     def get_request_info(self, request):
-        analyzedIRequestInfo = self._helpers.analyzeRequest(request)  
-        reqHeaders = analyzedIRequestInfo.getHeaders()  
+        analyzedIRequestInfo = self._helpers.analyzeRequest(request)
+        reqHeaders = analyzedIRequestInfo.getHeaders()
         reqBodys = request[analyzedIRequestInfo.getBodyOffset():].tostring()
-        reqMethod = analyzedIRequestInfo.getMethod() 
+        reqMethod = analyzedIRequestInfo.getMethod()
         reqParameters = analyzedIRequestInfo.getParameters()#参数
         return analyzedIRequestInfo, reqHeaders, reqBodys, reqMethod, reqParameters
 
     def get_response_info(self, response):
-        analyzedIResponseInfo = self._helpers.analyzeRequest(response)  
-        resHeaders = analyzedIResponseInfo.getHeaders() 
-        resBodys = response[analyzedIResponseInfo.getBodyOffset():].tostring()  
-        # resStatusCode = analyzedIResponseInfo.getStatusCode() 
-        return resHeaders, resBodys
+        analyzedIResponseInfo = self._helpers.analyzeRequest(response)
+        resHeaders = analyzedIResponseInfo.getHeaders()
+        resBodys = response[analyzedIResponseInfo.getBodyOffset():].tostring()
+        # resStatusCode = analyzedIResponseInfo.getStatusCode()
+        return resHeaders,resBodys
     def get_server_info(self, httpService):
         host = httpService.getHost()
         port = httpService.getPort()
@@ -54,7 +56,7 @@ class BurpExtender(IBurpExtender, IMessageEditorTabFactory, IContextMenuFactory,
         parameterType = parameter.getType()
         return parameterName, parameterValue, parameterType
     def shiroCheck(self, reqUrl, request, httpService):
-    
+
         # 构造参数
         parameterName = 'rememberMe'
         parameterValue = '123'
@@ -66,7 +68,7 @@ class BurpExtender(IBurpExtender, IMessageEditorTabFactory, IContextMenuFactory,
         newAnalyzedRequest, newReqHeaders, newReqBodys, newReqMethod, newReqParameters = self.get_request_info(
             newRequest)
         # 新的响应
-        newIHttpRequestResponse = self._callbacks.makeHttpRequest(httpService, newRequest) 
+        newIHttpRequestResponse = self._callbacks.makeHttpRequest(httpService, newRequest)
         if newIHttpRequestResponse == None:
             return False
 
@@ -87,6 +89,13 @@ class BurpExtender(IBurpExtender, IMessageEditorTabFactory, IContextMenuFactory,
                     "Used Shiro",
                     "High"))
                 return True
+    def filter(self,reqUrl):
+        filterUrl = re.match("([^?]*\.css)|([^?]*\.js)|([^?]*\.png)|([^?]*\.jpg)|([^?]*\.ico)|([^?]*\.woff)|([^?]*\.woff2)",reqUrl)
+        #if not filterUrl_1:
+        if  filterUrl:
+            return False
+        else:
+            return True
     def start_run(self, baseRequestResponse):
 
         self.baseRequestResponse = baseRequestResponse
@@ -102,7 +111,9 @@ class BurpExtender(IBurpExtender, IMessageEditorTabFactory, IContextMenuFactory,
         # 获取请求的url
         reqUrl = self.get_request_url(protocol, reqHeaders)
         #执行检测
-        self.shiroCheck(reqUrl, request, httpService)
+        if self.filter(reqUrl):
+            self.shiroCheck(reqUrl, request, httpService)
+
     #被动扫描
     def doPassiveScan(self, baseRequestResponse):
         '''
